@@ -1,0 +1,15 @@
+{
+  "name": "epic-citadel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "alchemy deploy alchemy.run.ts --stage prod",
+    "destroy": "alchemy destroy alchemy.run.ts --stage prod"
+  },
+  "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "@effect/platform-node": "4.0.6",
+    "alchemy": "2.0.0-beta.84",
+    "effect": "4.0.6"
+  }
+}

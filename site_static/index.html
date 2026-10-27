@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Epic Citadel</title>
+
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/libs/modernizr.js"></script>
+    <script src="js/libs/jquery-1.5.2.min.js"></script>
+    <script src="js/plugins/cssbrowsers.js"></script>
+    <script src="js/warnings.js"></script>
+    <script src="js/compat.js"></script>
+
+    <style type="text/css">
+      body {
+          background-color: #080808;
+          color: #ccc;
+          background-image: url('images/bg_site.jpg');
+          background-repeat: no-repeat;
+          background-size: contain;
+          padding: 0;
+          margin: 0;
+          text-align: center;
+      }
+
+      .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+
+      textarea.emscripten {
+	  border: 1px solid gray;
+	  font-family: consolas, monospace;
+	  font-size: 70%;
+	  background: #777;
+	  visibility: hidden; /* starts off as hidden; shows up on output */
+      }
+
+      #loadingui {
+        position: absolute;
+        bottom: 0;
+        left: 0; right: 0;
+        text-align: center;
+      }
+
+      #runtimeui {
+        position: absolute;
+        bottom: -7px; /* to account for the border on #display_wrapper */
+        right: 0;
+        padding: 0;
+        transition: all 3s ease;
+
+        /* hidden initially */
+        opacity: 0;
+      }
+
+      #FullscreenButton {
+        padding: 5px;
+        width: 25px;
+        height: 25px;
+        background: #444;
+      }
+
+      #FullscreenButton:hover {
+        background: orange;
+      }
+
+      #logos_top, #logos_bottom {
+        text-align: center;
+      }
+
+      div.emscripten {
+        text-align: center;
+        left:50%;
+        margin-left:-655px;
+        position: absolute;
+        top: 960px;
+      }
+
+      div#display_wrapper {
+        position: relative;
+        margin: 1em auto 10px auto;
+        text-align: center;
+        border: 5px solid #444;
+        border-radius: 5px 5px;
+        width: 80%;
+        min-width: 640px;
+        max-width: 68%;
+        display: inline-block;
+      }
+
+      canvas.emscripten {
+        /* fill the parent div */
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      .filler {
+        margin-top: 56.2%;
+      }
+
+      div#LoadingScreenContainer {
+        position: absolute;
+        top: 0; left: 0;
+        text-align: center;
+        width: 100%;
+        height: 100%;
+        background: black;
+        transition: all 3s ease;
+
+        font-weight: bold;
+        font-size: 175%;
+      }
+
+      img#LoadingScreen {
+        width: 100%;
+
+        /* center it in its parent */
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        margin: auto;
+      }
+
+      #LoadButton {
+        background: url(images/load-btn.png);
+        border: none;
+        width: 501px;
+        height: 83px;
+      }
+
+      #LoadButton:hover {
+        background-position: 0 -87px;
+      }
+
+      #LoadButton:active {
+        background-position: 0 -174px;
+      }
+
+      #warnings {
+        position: absolute;
+        top: 40%;
+        right: 25%;
+        left: 25%;
+        margin-bottom: 8px;
+        padding: 0 10px;
+        border: 1px solid #f6b83f;
+        -webkit-border-radius: 4px;
+        -moz-border-radius: 4px;
+        border-radius: 4px;
+        background: #fbdca0;
+        color: #c68609;
+        color: #644405;
+        list-style-type: none;
+        word-wrap: break-word;
+        font-weight: 600;
+        font-size: 14px;
+        font-size: 0.875rem;
+        font-family: "Helvetica", "Arial", sans-serif;
+        -ms-border-radius: 4px;
+        -o-border-radius: 4px;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <!-- Per-game/level/etc variables (only change these, rest of the page is "boilerplate") -->
+    <script type='text/javascript'>
+        // Epic Citadel doesn't want to pointer lock, even in full screen
+        var bLockPointer = false;
+        var MapDisplayName = 'Epic Citadel';
+        var Commandline = 'EpicCitadel';
+
+        var DataURL = 'UDKGame_Data.js';
+        var EngineURL = 'UDKGame-Browser-Shipping.js';
+
+        // Make the backbuffer no bigger than this width, even on larger screens.
+        // The height will be computed proportionally (so that we handle 16:9, 4:3,
+        // etc. displays properly).  If this is not set, screen.width will be used.
+        var MaxCanvasWidth = 1920;
+
+        // set this if we want to override TOTAL_MEMORY (the
+        // amount of memory available tot he app).  If not set,
+        // the default from compile time will be used;
+        //var MemoryOverride = 64*1024*1024;
+    </script>
+
+    <!-- Engine and display items -->
+    <div id="warnings"></div>
+    <div id="display_wrapper">
+      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+      <div class="filler"></div>
+      <!-- Loading controls and feedback -->
+      <div id="LoadingScreenContainer">
+        <img id="LoadingScreen" src="images/ec_splash.jpg">
+        <div id="loadingui">
+          <input id="LoadButton" type="button" value="" onclick="StartLoad();"><br>
+          <span id="status"></span><br>
+          <progress value="0" max="100" id="progress" hidden=1></progress>
+        </div>
+      </div>
+      <!-- runtime UI, e.g. fullscreen -->
+      <div id="runtimeui">
+        <img id="FullscreenButton" src="images/expand.png" onclick="GoFullscreen();">
+      </div>
+    </div>
+
+    <footer class="footer">
+      <a style="font-size: 16px; font-weight: bold; text-align:center" href="/html5_faq/">FAQ</a>
+      <ul class="clearfix" style="position:relative; top: 20px;">
+        <li><a target="_blank" href="http://www.unrealengine.com/features"><img src="images/UnrealEngine_ParentLogoWhite_wTag.png" alt="Powered by Unreal Engine"/></a></li>
+        <li id="logo"><img src="images/citadel_logo.png" alt="Powered by Unreal Engine"/></li>
+        <li><a target="_blank" href="http://www.unrealengine.com/licensing"><img src="images/Epic_logoFullColorTransparent.png" alt="Epic Games: 20 Years"/></a></li>
+        <li><a target="_blank" href="http://www.mozilla.org"><img src="images/mozilla_wordmark.png" alt="Mozilla"/></a></li>
+      </ul>
+
+      <p class="legal">
+      	© 2013, Epic Games, Inc. Epic, Epic Games, the Epic Games logo, Unreal, Unreal Engine, Unreal Technology, the Unreal Technology logo, and the Circle-U logo are trademarks or registered trademarks of Epic Games, Inc., in the United States of America and elsewhere. Other brands or product names are the trademarks of their respective owners.</p>
+
+    </footer>
+
+    <textarea class="emscripten" id="output" rows="12"></textarea>
+    <audio id="AudioElement" autobuffer loop> <source src=""> <source src=""> </audio>
+
+    <script type="text/javascript">
+
+		// init code
+
+		// we use a custom background here
+		//document.getElementById('LoadButton').value = 'Load ' + MapDisplayName;
+
+		document.title = MapDisplayName;
+		var bHasStarted = false;
+		var LastMusicName = '';
+
+        var swidth = window.screen.width;
+        var sheight = window.screen.height;
+
+		var CanvasBufferWidth = window.screen.width;
+		var CanvasBufferHeight = window.screen.height;
+
+        if (window["MaxCanvasWidth"]) {
+            var ratio = CanvasBufferHeight / CanvasBufferWidth;
+            CanvasBufferWidth = Math.min(CanvasBufferWidth, MaxCanvasWidth);
+            CanvasBufferHeight = CanvasBufferWidth * ratio;
+            $('.filler').css({'margin-top': (100 * (CanvasBufferHeight / CanvasBufferWidth)) + '%' });
+        }
+
+		// set the canvas backbuffer dimensions to be the full screen size
+		var canvas = document.getElementById("canvas");
+		canvas.width = CanvasBufferWidth;
+		canvas.height = CanvasBufferHeight;
+
+		// the engine!
+		var Module = {
+			// TOTAL_MEMORY: 64*1024*1024,
+			preRun: [],
+			postRun: [],
+			arguments: [Commandline,"ResX=" + CanvasBufferWidth, "ResY=" + CanvasBufferHeight],
+			print: (function() {
+			  var element = document.getElementById('output');
+			  element.value = ''; // clear browser cache
+			  return function(text) {
+			element.style.visibility = "visible";
+				// These replacements are necessary if you render to raw HTML
+				//text = text.replace(/&/g, "&amp;");
+				//text = text.replace(/</g, "&lt;");
+				//text = text.replace(/>/g, "&gt;");
+				//text = text.replace('\n', '<br>', 'g');
+				element.value += text + "\n";
+				element.scrollTop = 99999; // focus on bottom
+			  };
+			})(),
+			printErr: function(text) {
+			  if (0) { // XXX disabled for safety typeof dump == 'function') {
+				dump(text + '\n'); // fast, straight to the real console
+			  } else {
+				console.log(text);
+			  }
+			},
+			canvas: document.getElementById('canvas'),
+			setStatus: function(text) {
+			  if (Module.setStatus.interval) clearInterval(Module.setStatus.interval);
+			  var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+			  var statusElement = document.getElementById('status');
+			  var progressElement = document.getElementById('progress');
+			  if (m) {
+				text = m[1];
+				progressElement.value = parseInt(m[2])*100;
+				progressElement.max = parseInt(m[4])*100;
+				progressElement.hidden = false;
+			  } else {
+				progressElement.value = null;
+				progressElement.max = null;
+				progressElement.hidden = true;
+			  }
+			  statusElement.innerHTML = text;
+			},
+			totalDependencies: 0,
+			monitorRunDependencies: function(left) {
+			  this.totalDependencies = Math.max(this.totalDependencies, left);
+			  Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+			}
+		};
+        if (window["MemoryOverride"]) {
+            Module.TOTAL_MEMORY = MemoryOverride;
+        }
+
+		// externally called functions
+		function PlayMusic(MusicName){
+			var AudioElement = document.getElementById('AudioElement');
+			if (LastMusicName != MusicName)
+			{
+				LastMusicName = MusicName;
+				AudioElement.children[0].src = MusicName + ".ogg";
+				AudioElement.children[1].src = MusicName + ".wav";
+				AudioElement.load();
+				AudioElement.autoplay = true;
+			}
+		}
+
+		function HideLoadingScreen()
+		{
+			var LoadingElement = document.getElementById('LoadingScreenContainer');
+            LoadingElement.addEventListener("transitionend", function() {
+                /* probably not needed, but just in case for optimization */
+                LoadingElement.style.visibility = 'hidden';
+            }, false);
+			LoadingElement.style.opacity = '0';
+            document.getElementById('runtimeui').style.opacity = '1';
+		}
+
+        function GoFullscreen() {
+            if (!bHasStarted)
+                return;
+            Module.requestFullScreen(bLockPointer, false);
+        }
+
+        function StartLoad() {
+            if (bHasStarted)
+                return;
+
+            document.getElementById('LoadButton').style.display = 'none';
+
+            bHasStarted = true;
+            Module.setStatus('Preparing JavaScript...');
+
+            // do this in a setTimeout with a bit of a delay, to make sure that the Compiling JavaScript message makes it up
+            setTimeout(function() {
+                var js = document.createElement('script');
+                js.src = DataURL;
+                document.body.appendChild(js);
+
+                js = document.createElement('script');
+                js.src = EngineURL;
+                document.body.appendChild(js);
+            }, 30);
+        }
+	</script>
+  </body>
+</html>
