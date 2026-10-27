@@ -28,3 +28,28 @@
   if (window.AudioListener && !AudioListener.prototype.setVelocity) AudioListener.prototype.setVelocity = noop;
   if (window.PannerNode && !PannerNode.prototype.setVelocity) PannerNode.prototype.setVelocity = noop;
 })();
+
+// Fix 3: The page now starts loading without a click, so there is no user gesture before the engine
+// creates its AudioContext and sets the music <audio> to autoplay. Chrome/Safari start both muted
+// (suspended / play() rejected). Resume them on the first click, tap, or key press.
+(function () {
+  var contexts = [];
+  ['AudioContext', 'webkitAudioContext'].forEach(function (name) {
+    var Orig = window[name];
+    if (!Orig) return;
+    window[name] = function () {
+      var ctx = new Orig();
+      contexts.push(ctx);
+      return ctx;
+    };
+    window[name].prototype = Orig.prototype;
+  });
+  function unlock() {
+    contexts.forEach(function (ctx) { if (ctx.state === 'suspended') ctx.resume(); });
+    var audio = document.querySelectorAll('audio');
+    for (var i = 0; i < audio.length; i++) if (audio[i].autoplay && audio[i].paused) audio[i].play().catch(function () {});
+  }
+  ['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+    document.addEventListener(type, unlock, true);
+  });
+})();

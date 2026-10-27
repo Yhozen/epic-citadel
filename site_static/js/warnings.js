@@ -51,12 +51,6 @@ function Warnings(alertbox, placeholder) {
 
 	};
 
-	this.tryAnyway = function() {
-	var $placeholder = $(_this.placeholder.selector);
-	$('#LoadButton').hide();
-		$placeholder.after('<div id="msg-wrapper"><h2 id="unsupported-msg">This browser is currently unsupported. Please download <a target="_blank" href="http://www.mozilla.org/en-US/firefox/">Firefox 22</a> for an optimal experience or <a href="#" onclick="StartLoad(); return false;">try anyway.</a></h2></div>');
-	};
-
 	this.displayMessage = function(msg) {
 		_this.$alertbox.html(msg).show();
 	};
@@ -72,7 +66,7 @@ function Warnings(alertbox, placeholder) {
 
 
 		if(_this.isChrome || _this.isSafari) {
-			_this.tryAnyway();
+			StartLoad();
 		} else if (glAvailable !== true) {
 			_this.displayIncompatiblePlaceholder();
 		} else if (!_this.isFirefox) {
